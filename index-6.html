@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Отзывы о Матвее</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer onerror="window.__supabaseLoadFailed=true"></script>
+<style>
+  :root{
+    --black: #07090a;
+    --panel: #0f1513;
+    --green: #2fd17e;
+    --green-dim: #1c6b45;
+    --white: #eef4f0;
+    --muted: #7c8d86;
+    --line: #1c2a24;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{background:var(--black); color:var(--white); font-family: "Helvetica Neue", Arial, sans-serif;}
+  body{min-height:100vh; display:flex; flex-direction:column;}
+
+  .grain{
+    position:fixed; inset:0; pointer-events:none; opacity:.05; z-index:1;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  header{
+    position:relative; z-index:2;
+    padding: 64px 24px 40px;
+    display:flex; flex-direction:column; align-items:center; text-align:center;
+    border-bottom:1px solid var(--line);
+    background: radial-gradient(ellipse at 50% 0%, rgba(47,209,126,0.07), transparent 60%);
+  }
+  .avatar-wrap{
+    width:140px; height:140px; border-radius:50%; overflow:hidden;
+    border:2px solid var(--green-dim);
+    box-shadow: 0 0 0 6px rgba(47,209,126,0.06), 0 20px 50px rgba(0,0,0,0.6);
+    margin-bottom:24px;
+  }
+  .avatar-wrap img{width:100%; height:100%; object-fit:cover; display:block; filter:grayscale(15%) contrast(1.05);}
+
+  h1{
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight:700;
+    letter-spacing:-0.02em;
+    color:var(--white);
+  }
+  h1 span{color:var(--green);}
+  .subtitle{
+    margin-top:10px;
+    color:var(--muted);
+    font-size:15px;
+    letter-spacing:.02em;
+  }
+  .stats{
+    margin-top:28px;
+    display:flex; gap:28px;
+  }
+  .stat{text-align:center;}
+  .stat .num{font-size:26px; font-weight:700; color:var(--green);}
+  .stat .lbl{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-top:2px;}
+
+  main{
+    position:relative; z-index:2;
+    flex:1;
+    max-width: 720px;
+    width:100%;
+    margin: 0 auto;
+    padding: 48px 20px 100px;
+  }
+
+  .form-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding: 24px;
+    margin-bottom: 48px;
+  }
+  .form-card h2{
+    font-size:16px;
+    font-weight:600;
+    color:var(--white);
+    margin-bottom:18px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .form-card h2::before{
+    content:""; width:8px; height:8px; border-radius:50%;
+    background:var(--green); box-shadow:0 0 8px var(--green);
+  }
+
+  label{
+    display:block; font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;
+  }
+  input[type=text], textarea{
+    width:100%;
+    background:#0b1210;
+    border:1px solid var(--line);
+    color:var(--white);
+    border-radius:8px;
+    padding:12px 14px;
+    font-size:14px;
+    font-family:inherit;
+    resize:vertical;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input[type=text]:focus, textarea:focus{
+    outline:none;
+    border-color:var(--green-dim);
+    box-shadow:0 0 0 3px rgba(47,209,126,0.12);
+  }
+  .field{margin-bottom:16px;}
+
+  .rating-row{display:flex; align-items:center; gap:14px; margin-bottom:18px;}
+  .stars{display:flex; gap:4px; cursor:pointer;}
+  .star{
+    font-size:22px; color:#2a3a33; transition:color .12s, transform .12s;
+    user-select:none;
+  }
+  .star.active{color:var(--green); text-shadow:0 0 10px rgba(47,209,126,.5);}
+  .rating-label{font-size:13px; color:var(--muted);}
+
+  button.submit{
+    background:var(--green);
+    color:#06140c;
+    border:none;
+    font-weight:700;
+    font-size:14px;
+    padding:12px 22px;
+    border-radius:8px;
+    cursor:pointer;
+    letter-spacing:.02em;
+    transition: transform .12s, background .15s;
+  }
+  button.submit:hover{background:#3ee491; transform:translateY(-1px);}
+  button.submit:active{transform:translateY(0);}
+
+  .error{color:#ff7a6b; font-size:12px; margin-top:6px; display:none;}
+
+  .reviews-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:18px; padding-bottom:10px; border-bottom:1px solid var(--line);
+  }
+  .reviews-head h3{font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-weight:600;}
+  .sort-select{
+    background:transparent; color:var(--green); border:none; font-size:12px; cursor:pointer;
+  }
+
+  .review{
+    border:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(47,209,126,0.025), transparent);
+    border-radius:12px;
+    padding:18px 18px 16px;
+    margin-bottom:14px;
+    position:relative;
+    animation: fadeIn .35s ease;
+  }
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  .review-top{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;}
+  .review-author{font-weight:700; color:var(--white); font-size:14px;}
+  .review-date{font-size:11px; color:var(--muted);}
+  .review-stars{color:var(--green); font-size:13px; letter-spacing:2px; margin-bottom:8px;}
+  .review-text{font-size:14px; line-height:1.55; color:#d8e3de;}
+
+  .empty{
+    text-align:center; color:var(--muted); font-size:14px; padding:40px 0;
+  }
+  .config-banner{
+    background:rgba(255,180,60,0.08);
+    border:1px solid rgba(255,180,60,0.3);
+    color:#e8b95c;
+    font-size:12.5px;
+    padding:10px 14px;
+    border-radius:8px;
+    margin-bottom:18px;
+  }
+  .loading{text-align:center; color:var(--muted); font-size:13px; padding:20px 0;}
+
+  footer{
+    position:relative; z-index:2;
+    text-align:center; padding:24px; font-size:11px; color:var(--muted);
+    border-top:1px solid var(--line);
+  }
+
+  ::placeholder{color:#4d5e57;}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<header>
+  <div class="avatar-wrap"><img src="avatar.jpg" alt="Матвей"></div>
+  <h1>Отзывы о <span>Матвее</span></h1>
+  <p class="subtitle">Честные слова от тех, кто его знает</p>
+  <div class="stats">
+    <div class="stat"><div class="num" id="statCount">0</div><div class="lbl">Отзывов</div></div>
+    <div class="stat"><div class="num" id="statAvg">—</div><div class="lbl">Рейтинг</div></div>
+  </div>
+</header>
+
+<main>
+  <section class="form-card">
+    <h2>Оставить отзыв</h2>
+    <div class="field">
+      <label for="name">Ваше имя</label>
+      <input type="text" id="name" placeholder="Как вас зовут?" maxlength="40">
+    </div>
+    <div class="field">
+      <label for="text">Отзыв</label>
+      <textarea id="text" rows="4" placeholder="Что думаете о Матвее?" maxlength="600"></textarea>
+    </div>
+    <div class="rating-row">
+      <div class="stars" id="stars">
+        <span class="star" data-v="1">★</span>
+        <span class="star" data-v="2">★</span>
+        <span class="star" data-v="3">★</span>
+        <span class="star" data-v="4">★</span>
+        <span class="star" data-v="5">★</span>
+      </div>
+      <span class="rating-label" id="ratingLabel">Поставьте оценку</span>
+    </div>
+    <div class="error" id="errorMsg"></div>
+    <button class="submit" id="submitBtn">Опубликовать отзыв</button>
+  </section>
+
+  <div id="configBanner" class="config-banner" style="display:none;">
+    ⚠ База не подключена. Отзывы сохраняются только в этом браузере. Укажите SUPABASE_URL и SUPABASE_KEY в коде, чтобы все видели общие отзывы.
+  </div>
+
+  <div class="reviews-head">
+    <h3>Все отзывы</h3>
+    <select class="sort-select" id="sortSelect">
+      <option value="new">Сначала новые</option>
+      <option value="old">Сначала старые</option>
+      <option value="high">Высокий рейтинг</option>
+      <option value="low">Низкий рейтинг</option>
+    </select>
+  </div>
+
+  <div id="reviewsList"></div>
+</main>
+
+<footer>Страница отзывов · хранение локально в вашем браузере</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+
+  // ====== НАСТРОЙКА БАЗЫ ДАННЫХ (Supabase) ======
+  // Вставьте сюда данные вашего проекта Supabase, чтобы отзывы были общими для всех.
+  // Если оставить пустым — сайт будет работать локально (localStorage), отзывы видны только вам.
+  const SUPABASE_URL = '';   // например: 'https://abcdefgh.supabase.co'
+  const SUPABASE_KEY = '';   // anon public key из настроек проекта
+
+  // Уникальный идентификатор ЭТОГО сайта. Если делаешь несколько сайтов на одной
+  // базе Supabase — у каждого должен быть свой SITE_ID, иначе отзывы перемешаются.
+  const SITE_ID = 'matvey';
+  // ================================================
+
+  const STORAGE_KEY = 'reviews_' + SITE_ID;
+  let rating = 0;
+  let supabase = null;
+  let useSupabase = false;
+
+  try{
+    if (SUPABASE_URL && SUPABASE_KEY && window.supabase && typeof window.supabase.createClient === 'function') {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      useSupabase = true;
+    }
+  } catch(e){
+    console.error('Supabase init failed:', e);
+    useSupabase = false;
+  }
+
+  if(!useSupabase){
+    const banner = document.getElementById('configBanner');
+    if(banner) banner.style.display = 'block';
+  }
+
+  // ---------- локальное хранилище (fallback) ----------
+  let memoryList = null; // запасной вариант в памяти, если localStorage недоступен
+  let localStorageBroken = false;
+
+  function loadLocal(){
+    if(localStorageBroken){
+      return memoryList || [];
+    }
+    try{
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch(e){
+      console.warn('localStorage недоступен, переключаюсь на память:', e);
+      localStorageBroken = true;
+      return memoryList || [];
+    }
+  }
+  function saveLocal(list){
+    if(localStorageBroken){
+      memoryList = list;
+      return;
+    }
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    } catch(e){
+      console.warn('localStorage недоступен, переключаюсь на память:', e);
+      localStorageBroken = true;
+      memoryList = list;
+    }
+  }
+
+  // ---------- получить отзывы ----------
+  async function fetchReviews(){
+    if(useSupabase){
+      try{
+        const { data, error } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('site_id', SITE_ID)
+          .order('created_at', { ascending: false });
+        if(error){ console.error('Supabase select error:', error); return []; }
+        return data.map(r => ({
+          id: r.id,
+          name: r.name,
+          text: r.text,
+          rating: r.rating,
+          date: r.created_at
+        }));
+      } catch(e){
+        console.error('Supabase fetch failed:', e);
+        return [];
+      }
+    } else {
+      return loadLocal();
+    }
+  }
+
+  // ---------- добавить отзыв ----------
+  async function addReview(name, text, rating){
+    if(useSupabase){
+      const { error } = await supabase
+        .from('reviews')
+        .insert([{ site_id: SITE_ID, name, text, rating }]);
+      if(error){
+        console.error('Supabase insert error:', error);
+        throw new Error(error.message || 'Ошибка базы данных');
+      }
+    } else {
+      const list = loadLocal();
+      list.push({ id: Date.now(), name, text, rating, date: new Date().toISOString() });
+      saveLocal(list);
+    }
+  }
+
+  const starsEl = document.getElementById('stars');
+  const ratingLabel = document.getElementById('ratingLabel');
+  const labels = ['','Плохо','Так себе','Нормально','Хорошо','Отлично'];
+
+  starsEl.addEventListener('click', (e)=>{
+    const star = e.target.closest('.star');
+    if(!star) return;
+    rating = parseInt(star.dataset.v);
+    renderStars();
+  });
+  function renderStars(){
+    document.querySelectorAll('#stars .star').forEach(s=>{
+      s.classList.toggle('active', parseInt(s.dataset.v) <= rating);
+    });
+    ratingLabel.textContent = rating ? labels[rating] : 'Поставьте оценку';
+  }
+
+  document.getElementById('submitBtn').addEventListener('click', async ()=>{
+    const nameInput = document.getElementById('name');
+    const textInput = document.getElementById('text');
+    const name = nameInput.value.trim();
+    const text = textInput.value.trim();
+    const errorMsg = document.getElementById('errorMsg');
+    const btn = document.getElementById('submitBtn');
+
+    if(!name || !text || !rating){
+      errorMsg.textContent = 'Заполните имя, текст отзыва и поставьте оценку.';
+      errorMsg.style.display = 'block';
+      return;
+    }
+    errorMsg.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Публикация...';
+
+    try{
+      await addReview(name, text, rating);
+      nameInput.value = '';
+      textInput.value = '';
+      rating = 0;
+      renderStars();
+      await renderReviews();
+    } catch(e){
+      console.error('Ошибка при сохранении отзыва:', e);
+      errorMsg.textContent = 'Не удалось сохранить отзыв: ' + (e && e.message ? e.message : 'неизвестная ошибка');
+      errorMsg.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Опубликовать отзыв';
+    }
+  });
+
+  function formatDate(iso){
+    const d = new Date(iso);
+    return d.toLocaleDateString('ru-RU', {day:'numeric', month:'short', year:'numeric'});
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  let cachedList = [];
+
+  async function renderReviews(){
+    const container = document.getElementById('reviewsList');
+    container.innerHTML = '<div class="loading">Загрузка отзывов…</div>';
+
+    cachedList = await fetchReviews();
+    applySortAndRender();
+  }
+
+  function applySortAndRender(){
+    const sort = document.getElementById('sortSelect').value;
+    let sorted = [...cachedList];
+    if(sort==='new') sorted.sort((a,b)=> new Date(b.date) - new Date(a.date));
+    if(sort==='old') sorted.sort((a,b)=> new Date(a.date) - new Date(b.date));
+    if(sort==='high') sorted.sort((a,b)=>b.rating-a.rating);
+    if(sort==='low') sorted.sort((a,b)=>a.rating-b.rating);
+
+    const container = document.getElementById('reviewsList');
+    container.innerHTML = '';
+
+    if(sorted.length===0){
+      container.innerHTML = '<div class="empty">Пока нет отзывов. Будьте первым.</div>';
+    } else {
+      sorted.forEach(r=>{
+        const div = document.createElement('div');
+        div.className = 'review';
+        div.innerHTML = `
+          <div class="review-top">
+            <span class="review-author">${escapeHtml(r.name)}</span>
+            <span class="review-date">${formatDate(r.date)}</span>
+          </div>
+          <div class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+          <div class="review-text">${escapeHtml(r.text)}</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    document.getElementById('statCount').textContent = cachedList.length;
+    if(cachedList.length){
+      const avg = (cachedList.reduce((s,r)=>s+r.rating,0)/cachedList.length).toFixed(1);
+      document.getElementById('statAvg').textContent = avg;
+    } else {
+      document.getElementById('statAvg').textContent = '—';
+    }
+  }
+
+  document.getElementById('sortSelect').addEventListener('change', applySortAndRender);
+
+  renderStars();
+  renderReviews();
+
+}); // конец DOMContentLoaded
+</script>
+</body>
+</html>
